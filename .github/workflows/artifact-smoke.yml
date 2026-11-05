@@ -1,0 +1,45 @@
+name: Candidate fullscreen regression
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Build run containing the Windows package
+        required: true
+        type: string
+      artifact_name:
+        description: Exact Windows package artifact name
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  fullscreen:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run_id }}
+          name: ${{ inputs.artifact_name }}
+          path: package
+      - name: Start, play, and quit
+        shell: pwsh
+        run: ./extras/juxtopposed/ci/launch-test.ps1 -VlcDir package -WorkDir "${{ runner.temp }}"
+      - name: Check restored fullscreen client bounds
+        shell: pwsh
+        run: python extras/juxtopposed/ci/fullscreen_geometry_test.py package "${{ runner.temp }}/vlc-launch-test"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: fullscreen-results-${{ inputs.run_id }}
+          path: |
+            ${{ runner.temp }}/vlc-launch-test/*.json
+            ${{ runner.temp }}/vlc-launch-test/*.log
+            ${{ runner.temp }}/vlc-launch-test/*.txt
+          retention-days: 7
