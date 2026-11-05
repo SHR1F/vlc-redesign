@@ -105,13 +105,14 @@ try:
 finally:
     if connection:
         connection.sendall(b"quit\n")
-        connection.close()
     try:
         process.wait(timeout=20)
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait()
         result["quit_timeout"] = True
+    if connection:
+        connection.close()
     result["exit_code"] = process.returncode
     (work / "fullscreen-result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps(result), flush=True)
