@@ -3,6 +3,11 @@ name: Candidate fullscreen regression
 on:
   workflow_dispatch:
     inputs:
+      repository:
+        description: Repository containing the build run
+        required: true
+        default: SHR1F/vlc-redesign
+        type: string
       run_id:
         description: Build run containing the Windows package
         required: true
@@ -25,6 +30,7 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           github-token: ${{ github.token }}
+          repository: ${{ inputs.repository }}
           run-id: ${{ inputs.run_id }}
           name: ${{ inputs.artifact_name }}
           path: package
