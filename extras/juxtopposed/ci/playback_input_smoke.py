@@ -395,12 +395,13 @@ profile = package / "portable"
     f"restore-playback-states={int(args.baseline)}\nrestore-playback-pos=0\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
     "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\nwhats-new-seen=0.5.5\n")
-clip, next_clip = work / "first.y4m", work / "second.y4m"
-make_clip(clip)
-make_clip(next_clip)
 subtitle = "1\n00:00:00,000 --> 00:01:10,000\nPlayback input test\n"
-clip.with_suffix(".en.srt").write_text(subtitle)
 for index in range(32):
     (work / f"unrelated-{index}.srt").write_text(subtitle)
 for mode in ("player", "minimal"):
+    clip = work / f"{mode}-first.y4m"
+    next_clip = work / f"{mode}-second.y4m"
+    make_clip(clip)
+    make_clip(next_clip)
+    clip.with_suffix(".en.srt").write_text(subtitle)
     run_session(package, work, mode, clip, next_clip, args.baseline, args.feature_only)
