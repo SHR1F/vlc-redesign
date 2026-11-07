@@ -72,6 +72,14 @@ def tap(action):
     action(True)
 
 
+def ctrl_key(vk):
+    key(0x11)
+    try:
+        tap(lambda up=False: key(vk, up))
+    finally:
+        key(0x11, True)
+
+
 def wait_for(predicate, label, seconds=5):
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
@@ -241,6 +249,18 @@ def run_session(package, work, mode, clip, next_clip, baseline):
 
         space()
         remote.expect_rate(2)
+        ctrl_key(0x50)  # Ctrl+P opens Settings
+        remote.expect_rate(1.25)
+        space(True)
+        tap(space)
+        time.sleep(.35)
+        assert remote.state() == "play", "Space reached the video while Settings was open"
+        tap(lambda up=False: key(0x1B, up))
+        time.sleep(.5)
+        print(f"{mode}: Settings cancels the hold and takes playback focus", flush=True)
+
+        space()
+        remote.expect_rate(2)
         remote.run(f"add {next_clip.as_uri()}")
         wait_for(lambda: next_clip.name in remote.run("status"), "New media did not start")
         wait_for(lambda: remote.state() == "play", "New media did not enter playing state")
@@ -267,6 +287,10 @@ def run_session(package, work, mode, clip, next_clip, baseline):
             if connection:
                 connection.close()
         assert process.returncode == 0, f"VLC exited with {process.returncode}"
+        if log.exists():
+            messages = log.read_text(encoding="utf-8-sig", errors="replace")
+            assert not re.search(r"qt(?: generic)? (?:warning|error|critical).*qrc:", messages), \
+                f"{mode}: QML warnings appeared while checking playback controls"
 
 
 parser = argparse.ArgumentParser()
