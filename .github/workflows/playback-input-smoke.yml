@@ -20,6 +20,10 @@ on:
         description: Record unchanged upstream Hide UI behavior
         default: false
         type: boolean
+      feature_only:
+        description: Exercise gestures on the earlier build before the Hide UI shortcut fix
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -44,9 +48,11 @@ jobs:
         shell: pwsh
         env:
           VLC_BASELINE: ${{ inputs.baseline }}
+          VLC_FEATURE_ONLY: ${{ inputs.feature_only }}
         run: |
           $parameters = @()
           if ($env:VLC_BASELINE -eq 'true') { $parameters += '--baseline' }
+          if ($env:VLC_FEATURE_ONLY -eq 'true') { $parameters += '--feature-only' }
           python extras/juxtopposed/ci/playback_input_smoke.py package "${{ runner.temp }}/playback-input" @parameters
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()

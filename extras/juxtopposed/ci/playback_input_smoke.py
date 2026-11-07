@@ -161,7 +161,7 @@ def make_clip(path):
             output.write(frame)
 
 
-def run_session(package, work, mode, clip, next_clip, baseline):
+def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
     log = work / (mode + ".log")
     with socket.socket() as reservation:
         reservation.bind(("127.0.0.1", 0))
@@ -216,12 +216,13 @@ def run_session(package, work, mode, clip, next_clip, baseline):
 
         # K is a second Play/Pause binding. It exercises the Hide UI QML
         # route without using the new Space gesture in the window handler.
-        play_pause = lambda up=False: key(0x4B, up)
-        tap(play_pause)
-        wait_for(lambda: remote.state() == "pause", f"{mode}: remapped tap did not pause")
-        tap(play_pause)
-        wait_for(lambda: remote.state() == "play", f"{mode}: remapped tap did not resume")
-        print(f"{mode}: custom Play/Pause binding toggles once", flush=True)
+        if not feature_only or mode != "minimal":
+            play_pause = lambda up=False: key(0x4B, up)
+            tap(play_pause)
+            wait_for(lambda: remote.state() == "pause", f"{mode}: remapped tap did not pause")
+            tap(play_pause)
+            wait_for(lambda: remote.state() == "play", f"{mode}: remapped tap did not resume")
+            print(f"{mode}: custom Play/Pause binding toggles once", flush=True)
 
         remote.run("rate 1.25")
         remote.expect_rate(1.25)
@@ -310,6 +311,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("package", type=Path)
 parser.add_argument("work", type=Path)
 parser.add_argument("--baseline", action="store_true")
+parser.add_argument("--feature-only", action="store_true")
 args = parser.parse_args()
 package, work = args.package.resolve(), args.work.resolve()
 work.mkdir(parents=True, exist_ok=True)
@@ -329,4 +331,4 @@ clip.with_suffix(".en.srt").write_text(subtitle)
 for index in range(32):
     (work / f"unrelated-{index}.srt").write_text(subtitle)
 for mode in ("player", "minimal"):
-    run_session(package, work, mode, clip, next_clip, args.baseline)
+    run_session(package, work, mode, clip, next_clip, args.baseline, args.feature_only)
