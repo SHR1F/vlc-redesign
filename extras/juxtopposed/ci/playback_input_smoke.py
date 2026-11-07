@@ -122,6 +122,35 @@ def point_at_video(hwnd):
     time.sleep(.15)
 
 
+def save_badge_preview(hwnd, target):
+    if user32.GetForegroundWindow() != hwnd:
+        return
+    rect = w.RECT()
+    user32.GetClientRect(hwnd, c.byref(rect))
+    width, height = min(rect.right, 640), min(rect.bottom, 180)
+    origin = w.POINT((rect.right - width) // 2, 0)
+    user32.ClientToScreen(hwnd, c.byref(origin))
+    command = f"""
+Add-Type -AssemblyName System.Drawing
+$bitmap = [Drawing.Bitmap]::new({width}, {height})
+$graphics = [Drawing.Graphics]::FromImage($bitmap)
+try {{
+    $graphics.CopyFromScreen({origin.x}, {origin.y}, 0, 0, $bitmap.Size)
+    $bitmap.Save($env:VLC_TEST_PREVIEW, [Drawing.Imaging.ImageFormat]::Png)
+}} finally {{
+    $graphics.Dispose()
+    $bitmap.Dispose()
+}}
+"""
+    try:
+        subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+                       env={**os.environ, "VLC_TEST_PREVIEW": str(target)},
+                       creationflags=subprocess.CREATE_NO_WINDOW,
+                       capture_output=True, check=True, timeout=8)
+    except (subprocess.SubprocessError, OSError):
+        print("Preview capture was unavailable on the CI desktop", flush=True)
+
+
 class Remote:
     def __init__(self, connection):
         self.connection = connection
@@ -228,6 +257,9 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
         remote.expect_rate(1.25)
         space()
         remote.expect_rate(2)
+        if not feature_only:
+            time.sleep(.3)
+            save_badge_preview(hwnd, work / (mode + "-speed-badge.png"))
         space()  # held-key repeat
         remote.expect_rate(2)
         assert remote.state() == "play", "Space repeat changed the play state"
