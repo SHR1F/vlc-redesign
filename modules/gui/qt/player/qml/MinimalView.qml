@@ -58,6 +58,11 @@ FocusScope {
         focus: visible
 
         videoSurfaceProvider: MainCtx.videoSurfaceProvider
+        doubleClickEnabled: MainCtx.doubleClickAction !== 0
+
+        // Dispatch before VideoSurface forwards the same key through the vout.
+        Keys.priority: Keys.BeforeItem
+        Keys.onPressed: (event) => root.forwardPlaybackKey(event)
 
         visible: MainCtx.hasEmbededVideo
 
@@ -85,7 +90,6 @@ FocusScope {
 
             onTriggered: {
                 // Cursor hides when toggleControlBarButton is not visible
-                videoSurface.forceActiveFocus()
                 videoSurface.cursorShape = Qt.BlankCursor
                 root._csdOnVideo = false
             }
@@ -183,9 +187,13 @@ FocusScope {
         }
     }
 
-    Keys.onPressed: (event) => {
-        if (event.accepted)
+    function forwardPlaybackKey(event) {
+        if (event.accepted || event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab)
             return
-        MainCtx.sendHotkey(event.key, event.modifiers);
+        event.accepted = true
+        if (MainCtx.useGlobalShortcuts)
+            MainCtx.sendHotkey(event.key, event.modifiers)
     }
+
+    Keys.onPressed: (event) => root.forwardPlaybackKey(event)
 }
