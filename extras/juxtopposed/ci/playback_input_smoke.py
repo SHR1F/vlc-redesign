@@ -302,7 +302,7 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
         if not feature_only:
             before_seek = remote.position()
             assert before_seek >= 0, "Could not read playback position"
-            tap(lambda up=False: key(0x27, up))  # Right, remapped to a ten-second seek
+            tap(lambda up=False: key(0x51, up))  # Q, remapped to a ten-second seek
             wait_for(lambda: remote.position() >= before_seek + 8,
                      f"{mode}: seek shortcut did not jump forward", seconds=3)
             print(f"{mode}: seek shortcut jumps forward", flush=True)
@@ -426,7 +426,7 @@ version = subprocess.check_output(
 ).strip()
 (profile / "vlcrc").write_text(
     "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\n"
-    "key-audiodelay-up=\nkey-play-pause=Space\tk\nkey-jump+short=Right\nshort-jump-size=10\n"
+    "key-audiodelay-up=\nkey-play-pause=Space\tk\nkey-jump+short=q\nshort-jump-size=10\n"
     f"restore-playback-states={int(args.baseline)}\nrestore-playback-pos=0\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
     "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\n"
