@@ -186,17 +186,21 @@ def run_session(package, work, mode, clip, next_clip, baseline):
         activate(hwnd)
         point_at_video(hwnd)
         wait_for(lambda: remote.state() == "play", "Video did not enter playing state")
+        # Let startup overlays and the focus change finish before sending keys.
+        time.sleep(1.0)
 
         space = lambda up=False: key(0x20, up)
         tap(space)
         time.sleep(.8)
-        if baseline:
+        if baseline and mode == "minimal":
             print(f"Unchanged upstream Hide UI after a Space tap: {remote.state()}", flush=True)
             return
         wait_for(lambda: remote.state() == "pause", f"{mode}: Space tap did not pause")
         tap(space)
         wait_for(lambda: remote.state() == "play", f"{mode}: Space tap did not resume")
         print(f"{mode}: Space tap pauses and resumes", flush=True)
+        if baseline:
+            return
 
         remote.run("rate 1.25")
         remote.expect_rate(1.25)
@@ -211,8 +215,10 @@ def run_session(package, work, mode, clip, next_clip, baseline):
 
         tap(mouse)
         wait_for(lambda: remote.state() == "pause", f"{mode}: mouse tap did not pause")
+        time.sleep(user32.GetDoubleClickTime() / 1000 + .1)
         tap(mouse)
         wait_for(lambda: remote.state() == "play", f"{mode}: mouse tap did not resume")
+        time.sleep(user32.GetDoubleClickTime() / 1000 + .1)
         mouse()
         remote.expect_rate(2)
         space()
@@ -279,5 +285,5 @@ profile = package / "portable"
 clip, next_clip = work / "first.y4m", work / "second.y4m"
 make_clip(clip)
 make_clip(next_clip)
-for mode in (("minimal",) if args.baseline else ("player", "minimal")):
+for mode in ("player", "minimal"):
     run_session(package, work, mode, clip, next_clip, args.baseline)
