@@ -13,6 +13,12 @@ what you see first, with the technical details after. Based on VLC `4.0.0-dev`, 
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Hold Space or the left mouse button over a playing video for temporary 2× speed. Releasing it restores the previous speed.
+
 ## [0.5.5] · 2026-11-07
 
 **macOS updates itself**, Android TV is lighter, and VideoLAN's latest fixes. The last full release (installers and
