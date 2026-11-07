@@ -61,6 +61,10 @@ FocusScope {
         holdSpeedPlayer: MainCtx.useGlobalShortcuts ? Player : null
         doubleClickEnabled: MainCtx.doubleClickAction !== 0
 
+        // Dispatch before VideoSurface forwards the same key through the vout.
+        Keys.priority: Keys.BeforeItem
+        Keys.onPressed: (event) => root.forwardPlaybackKey(event)
+
         visible: MainCtx.hasEmbededVideo
 
         anchors.fill: parent
@@ -190,10 +194,13 @@ FocusScope {
         }
     }
 
-    Keys.onPressed: (event) => {
-        if (event.accepted || !MainCtx.useGlobalShortcuts)
+    function forwardPlaybackKey(event) {
+        if (event.accepted || event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab)
             return
         event.accepted = true
-        MainCtx.sendHotkey(event.key, event.modifiers);
+        if (MainCtx.useGlobalShortcuts)
+            MainCtx.sendHotkey(event.key, event.modifiers)
     }
+
+    Keys.onPressed: (event) => root.forwardPlaybackKey(event)
 }
