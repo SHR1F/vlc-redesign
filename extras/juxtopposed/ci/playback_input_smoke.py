@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import socket
+import sqlite3
 import subprocess
 import time
 
@@ -200,6 +201,21 @@ def check_saved_rate(remote, clip):
     remote.expect_rate(1.25)
 
 
+def check_stored_rate(package, clip):
+    database = package / "portable" / "ml" / "ml.db"
+    with sqlite3.connect(database.as_uri() + "?mode=ro", uri=True) as connection:
+        # The generated clip has a single speed setting and default picture
+        # settings. Inspect both possible speed values without changing
+        # the media library or running the separate restore-state path.
+        values = [value for (value,) in connection.execute("""
+            SELECT metadata.value
+            FROM Metadata AS metadata
+            JOIN File AS file ON file.media_id = metadata.id_media
+            WHERE file.mrl LIKE ? AND metadata.value IN ('1.250000', '2.000000')
+        """, ("%/" + clip.name,))]
+    return "1.250000" in values and "2.000000" not in values
+
+
 def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
     log = work / (mode + ".log")
     with socket.socket() as reservation:
@@ -332,8 +348,8 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
         assert remote.state() == "play", "Release after media change paused the new video"
         print(f"{mode}: media switch keeps the normal rate", flush=True)
 
-        check_saved_rate(remote, clip)
-        print(f"{mode}: reopened media remembers its normal rate", flush=True)
+        wait_for(lambda: check_stored_rate(package, clip), "Media library did not save the normal rate")
+        print(f"{mode}: media library stores 1.25× instead of the held rate", flush=True)
     finally:
         # Avoid leaving any synthetic button held if an assertion failed.
         try:
@@ -376,7 +392,7 @@ profile = package / "portable"
 (profile / "vlcrc").write_text(
     "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\n"
     "key-audiodelay-up=\nkey-play-pause=Space\tk\n"
-    "restore-playback-states=1\nrestore-playback-pos=0\n")
+    f"restore-playback-states={int(args.baseline)}\nrestore-playback-pos=0\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
     "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\nwhats-new-seen=0.5.5\n")
 clip, next_clip = work / "first.y4m", work / "second.y4m"
