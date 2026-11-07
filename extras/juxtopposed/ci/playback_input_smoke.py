@@ -389,12 +389,19 @@ work.mkdir(parents=True, exist_ok=True)
 profile = package / "portable"
 (profile / "vlc").mkdir(parents=True, exist_ok=True)
 (profile / "standalone").touch()
+version = subprocess.check_output(
+    ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+     "(Get-Item -LiteralPath $env:VLC_SMOKE_EXE).VersionInfo.ProductVersion"],
+    env={**os.environ, "VLC_SMOKE_EXE": str(package / "vlc.exe")},
+    creationflags=subprocess.CREATE_NO_WINDOW, text=True, timeout=10,
+).strip()
 (profile / "vlcrc").write_text(
     "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\n"
     "key-audiodelay-up=\nkey-play-pause=Space\tk\n"
     f"restore-playback-states={int(args.baseline)}\nrestore-playback-pos=0\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
-    "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\nwhats-new-seen=0.5.5\n")
+    "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\n"
+    f"whats-new-seen={version}\n")
 subtitle = "1\n00:00:00,000 --> 00:01:10,000\nPlayback input test\n"
 for index in range(32):
     (work / f"unrelated-{index}.srt").write_text(subtitle)
