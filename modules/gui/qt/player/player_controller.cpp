@@ -1586,7 +1586,7 @@ bool PlayerController::beginSpeedHold(SpeedHoldSource source)
     {
         vlc_player_locker lock{ d->m_player };
         if (vlc_player_GetState(d->m_player) != VLC_PLAYER_STATE_PLAYING
-            || vlc_player_GetCurrentMedia(d->m_player) != d->m_currentItem.get()
+            || !d->isCurrentItemSynced()
             || (!wasActive && !vlc_player_SetTemporaryRate(d->m_player, 2.f)))
             return false;
     }

@@ -327,6 +327,13 @@ public:
     void updatePosition();
     void updateTime(vlc_tick_t system_now, bool forceTimer);
 
+    enum SpeedHoldSource { KeyboardSpeedHold = 1, MouseSpeedHold = 2 };
+    static constexpr int SpeedHoldDelay = 350;
+    bool canHoldSpeed() const;
+    bool beginSpeedHold(SpeedHoldSource source);
+    void endSpeedHold(SpeedHoldSource source);
+    bool holdSpeedActive() const { return m_speedHoldSources != 0; }
+
     //getter/setters binded to a Q_PROPERTY
 public slots:
     //playback
@@ -337,12 +344,6 @@ public slots:
     float getBuffering() const;
     float getRate() const;
     void setRate( float );
-    enum SpeedHoldSource { KeyboardSpeedHold = 1, MouseSpeedHold = 2 };
-    static constexpr int SpeedHoldDelay = 350;
-    bool canHoldSpeed() const;
-    bool beginSpeedHold(SpeedHoldSource source);
-    void endSpeedHold(SpeedHoldSource source);
-    bool holdSpeedActive() const { return m_speedHoldSources != 0; }
     VLCTime getTime() const;
     void setTime(VLCTime);
     VLCDuration getRemainingTime() const;
