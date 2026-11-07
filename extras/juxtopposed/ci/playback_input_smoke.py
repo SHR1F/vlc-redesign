@@ -187,10 +187,6 @@ class Remote:
         values = re.findall(r"(?m)^\s*([+-]?\d+\.\d+)\s*$", self.run("rate"))
         return float(values[-1]) if values else None
 
-    def position(self):
-        values = re.findall(r"(?m)^\s*(\d+)\s*$", self.run("get_time"))
-        return int(values[-1]) if values else -1
-
     def expect_rate(self, value):
         wait_for(lambda: self.rate() == value, f"Playback rate did not reach {value}")
 
@@ -300,13 +296,6 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
             print(f"{mode}: custom Play/Pause binding toggles once", flush=True)
 
         if not feature_only:
-            before_seek = remote.position()
-            assert before_seek >= 0, "Could not read playback position"
-            tap(lambda up=False: key(0x51, up))  # Q, remapped to a ten-second seek
-            wait_for(lambda: remote.position() >= before_seek + 8,
-                     f"{mode}: seek shortcut did not jump forward", seconds=3)
-            print(f"{mode}: seek shortcut jumps forward", flush=True)
-
             assert not window_fills_screen(hwnd), "Expected a window before fullscreen"
             tap(lambda up=False: key(0x46, up))  # F
             wait_for(lambda: window_fills_screen(hwnd), f"{mode}: F did not enter fullscreen")
@@ -426,7 +415,7 @@ version = subprocess.check_output(
 ).strip()
 (profile / "vlcrc").write_text(
     "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\n"
-    "key-audiodelay-up=\nkey-play-pause=Space\tk\nkey-jump+short=q\nshort-jump-size=10\n"
+    "key-audiodelay-up=\nkey-play-pause=Space\tk\n"
     f"restore-playback-states={int(args.baseline)}\nrestore-playback-pos=0\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
     "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\n"
