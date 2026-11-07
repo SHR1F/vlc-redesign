@@ -282,6 +282,15 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
         space(True)
         assert remote.state() == "play", "Release after media change paused the new video"
         print(f"{mode}: media switch keeps the normal rate", flush=True)
+
+        remote.run("stop")
+        wait_for(lambda: remote.state() == "stop", "Playback did not stop")
+        remote.run("rate 1")
+        remote.run(f"add {clip.as_uri()}")
+        wait_for(lambda: clip.name in remote.run("status") and remote.state() == "play",
+                 "Original video did not reopen")
+        remote.expect_rate(1.25)
+        print(f"{mode}: reopened media remembers its normal rate", flush=True)
     finally:
         # Avoid leaving any synthetic button held if an assertion failed.
         try:
@@ -320,7 +329,8 @@ profile = package / "portable"
 (profile / "standalone").touch()
 (profile / "vlcrc").write_text(
     "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\n"
-    "key-audiodelay-up=\nkey-play-pause=Space\tk\n")
+    "key-audiodelay-up=\nkey-play-pause=Space\tk\n"
+    "restore-playback-states=1\nrestore-playback-pos=0\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
     "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\nwhats-new-seen=0.5.5\n")
 clip, next_clip = work / "first.y4m", work / "second.y4m"
