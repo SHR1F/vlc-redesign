@@ -310,8 +310,15 @@ void VideoSurface::mouseUngrabEvent()
 
 void VideoSurface::keyPressEvent(QKeyEvent* event)
 {
-    emit keyPressed(event->key(), event->modifiers());
-    event->ignore();
+    if (m_provider && m_provider->isEnabled())
+    {
+        // The vout already dispatches this hotkey. Letting it bubble to
+        // the enclosing view can run the same action a second time.
+        emit keyPressed(event->key(), event->modifiers());
+        event->accept();
+    }
+    else
+        event->ignore();
 }
 
 #if QT_CONFIG(wheelevent)

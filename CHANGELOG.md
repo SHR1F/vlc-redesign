@@ -19,6 +19,10 @@ what you see first, with the technical details after. Based on VLC `4.0.0-dev`, 
 
 - Hold Space or the left mouse button over a playing video for temporary 2× speed. Releasing it restores the previous speed.
 
+### Fixed
+
+- In Hide UI, pressing Space toggles playback once, and double-clicking the video respects the player's double-click setting.
+
 ## [0.5.5] · 2026-11-07
 
 **macOS updates itself**, Android TV is lighter, and VideoLAN's latest fixes. The last full release (installers and
