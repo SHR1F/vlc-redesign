@@ -210,6 +210,19 @@ def run_session(package, work, mode, clip, next_clip, baseline):
         if baseline:
             return
 
+        wait_for(lambda: re.search(r"(?m)^\| \d+ - ", remote.run("strack")),
+                 f"{mode}: local subtitle was not available")
+        print(f"{mode}: local subtitle still available after the folder scan", flush=True)
+
+        # K is a second Play/Pause binding. It exercises the Hide UI QML
+        # route without using the new Space gesture in the window handler.
+        play_pause = lambda up=False: key(0x4B, up)
+        tap(play_pause)
+        wait_for(lambda: remote.state() == "pause", f"{mode}: remapped tap did not pause")
+        tap(play_pause)
+        wait_for(lambda: remote.state() == "play", f"{mode}: remapped tap did not resume")
+        print(f"{mode}: custom Play/Pause binding toggles once", flush=True)
+
         remote.run("rate 1.25")
         remote.expect_rate(1.25)
         space()
@@ -303,11 +316,16 @@ work.mkdir(parents=True, exist_ok=True)
 profile = package / "portable"
 (profile / "vlc").mkdir(parents=True, exist_ok=True)
 (profile / "standalone").touch()
-(profile / "vlcrc").write_text("qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\n")
+(profile / "vlcrc").write_text(
+    "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\nkey-play-pause=Space\tk\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
     "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\nwhats-new-seen=0.5.5\n")
 clip, next_clip = work / "first.y4m", work / "second.y4m"
 make_clip(clip)
 make_clip(next_clip)
+subtitle = "1\n00:00:00,000 --> 00:01:10,000\nPlayback input test\n"
+clip.with_suffix(".en.srt").write_text(subtitle)
+for index in range(32):
+    (work / f"unrelated-{index}.srt").write_text(subtitle)
 for mode in ("player", "minimal"):
     run_session(package, work, mode, clip, next_clip, args.baseline)
