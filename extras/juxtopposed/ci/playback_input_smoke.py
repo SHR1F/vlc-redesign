@@ -190,6 +190,16 @@ def make_clip(path):
             output.write(frame)
 
 
+def check_saved_rate(remote, clip):
+    remote.run("stop")
+    wait_for(lambda: remote.state() == "stop", "Playback did not stop")
+    remote.run("rate 1")
+    remote.run(f"add {clip.as_uri()}")
+    wait_for(lambda: clip.name in remote.run("status") and remote.state() == "play",
+             "Original video did not reopen")
+    remote.expect_rate(1.25)
+
+
 def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
     log = work / (mode + ".log")
     with socket.socket() as reservation:
@@ -237,6 +247,13 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
         wait_for(lambda: remote.state() == "play", f"{mode}: Space tap did not resume")
         print(f"{mode}: Space tap pauses and resumes", flush=True)
         if baseline:
+            remote.run("rate 1.25")
+            remote.expect_rate(1.25)
+            remote.run(f"add {next_clip.as_uri()}")
+            wait_for(lambda: next_clip.name in remote.run("status") and remote.state() == "play",
+                     "Second baseline video did not open")
+            print("Unchanged upstream: reopening with playback-state restoration", flush=True)
+            check_saved_rate(remote, clip)
             return
 
         wait_for(lambda: re.search(r"(?m)^\| \d+ - ", remote.run("strack")),
@@ -315,13 +332,7 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
         assert remote.state() == "play", "Release after media change paused the new video"
         print(f"{mode}: media switch keeps the normal rate", flush=True)
 
-        remote.run("stop")
-        wait_for(lambda: remote.state() == "stop", "Playback did not stop")
-        remote.run("rate 1")
-        remote.run(f"add {clip.as_uri()}")
-        wait_for(lambda: clip.name in remote.run("status") and remote.state() == "play",
-                 "Original video did not reopen")
-        remote.expect_rate(1.25)
+        check_saved_rate(remote, clip)
         print(f"{mode}: reopened media remembers its normal rate", flush=True)
     finally:
         # Avoid leaving any synthetic button held if an assertion failed.
@@ -331,7 +342,10 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
         except RuntimeError:
             pass
         if connection:
-            connection.sendall(b"quit\n")
+            try:
+                connection.sendall(b"quit\n")
+            except OSError:
+                pass
         try:
             process.wait(timeout=20)
         except subprocess.TimeoutExpired:
@@ -341,7 +355,7 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
         finally:
             if connection:
                 connection.close()
-        assert process.returncode == 0, f"VLC exited with {process.returncode}"
+        assert process.returncode == 0, f"VLC exited with {process.returncode} (0x{process.returncode & 0xffffffff:08x})"
         if log.exists():
             messages = log.read_text(encoding="utf-8-sig", errors="replace")
             assert not re.search(r"qt(?: generic)? (?:warning|error|critical).*qrc:", messages), \
