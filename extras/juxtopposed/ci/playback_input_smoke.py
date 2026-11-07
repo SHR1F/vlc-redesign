@@ -317,7 +317,8 @@ profile = package / "portable"
 (profile / "vlc").mkdir(parents=True, exist_ok=True)
 (profile / "standalone").touch()
 (profile / "vlcrc").write_text(
-    "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\nkey-play-pause=Space\tk\n")
+    "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\n"
+    "key-audiodelay-up=\nkey-play-pause=Space\tk\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
     "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\nwhats-new-seen=0.5.5\n")
 clip, next_clip = work / "first.y4m", work / "second.y4m"
