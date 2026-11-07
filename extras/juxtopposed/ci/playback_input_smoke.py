@@ -22,6 +22,7 @@ user32.SetForegroundWindow.argtypes = [w.HWND]
 user32.IsWindowVisible.argtypes = [w.HWND]
 user32.GetWindowThreadProcessId.argtypes = [w.HWND, c.POINTER(w.DWORD)]
 user32.GetClientRect.argtypes = [w.HWND, c.POINTER(w.RECT)]
+user32.GetWindowRect.argtypes = [w.HWND, c.POINTER(w.RECT)]
 user32.ClientToScreen.argtypes = [w.HWND, c.POINTER(w.POINT)]
 user32.ShowWindow.argtypes = [w.HWND, c.c_int]
 enum_callback = c.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
@@ -123,6 +124,14 @@ def point_at_video(hwnd):
     time.sleep(.15)
 
 
+def window_fills_screen(hwnd):
+    bounds = w.RECT()
+    user32.GetWindowRect(hwnd, c.byref(bounds))
+    return (bounds.left <= 0 and bounds.top <= 0
+            and bounds.right >= user32.GetSystemMetrics(0)
+            and bounds.bottom >= user32.GetSystemMetrics(1))
+
+
 def save_badge_preview(hwnd, target):
     if user32.GetForegroundWindow() != hwnd:
         return
@@ -177,6 +186,10 @@ class Remote:
     def rate(self):
         values = re.findall(r"(?m)^\s*([+-]?\d+\.\d+)\s*$", self.run("rate"))
         return float(values[-1]) if values else None
+
+    def position(self):
+        values = re.findall(r"(?m)^\s*(\d+)\s*$", self.run("get_time"))
+        return int(values[-1]) if values else -1
 
     def expect_rate(self, value):
         wait_for(lambda: self.rate() == value, f"Playback rate did not reach {value}")
@@ -276,7 +289,7 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
                  f"{mode}: local subtitle was not available")
         print(f"{mode}: local subtitle still available after the folder scan", flush=True)
 
-        # K is a second Play/Pause binding. It exercises the Hide UI QML
+        # K is a second Play/Pause binding. It exercises the normal shortcut
         # route without using the new Space gesture in the window handler.
         if not feature_only or mode != "minimal":
             play_pause = lambda up=False: key(0x4B, up)
@@ -285,6 +298,22 @@ def run_session(package, work, mode, clip, next_clip, baseline, feature_only):
             tap(play_pause)
             wait_for(lambda: remote.state() == "play", f"{mode}: remapped tap did not resume")
             print(f"{mode}: custom Play/Pause binding toggles once", flush=True)
+
+        if not feature_only:
+            before_seek = remote.position()
+            assert before_seek >= 0, "Could not read playback position"
+            tap(lambda up=False: key(0x27, up))  # Right, remapped to a ten-second seek
+            wait_for(lambda: remote.position() >= before_seek + 8,
+                     f"{mode}: seek shortcut did not jump forward", seconds=3)
+            print(f"{mode}: seek shortcut jumps forward", flush=True)
+
+            assert not window_fills_screen(hwnd), "Expected a window before fullscreen"
+            tap(lambda up=False: key(0x46, up))  # F
+            wait_for(lambda: window_fills_screen(hwnd), f"{mode}: F did not enter fullscreen")
+            tap(lambda up=False: key(0x1B, up))  # Escape
+            wait_for(lambda: not window_fills_screen(hwnd), f"{mode}: Escape did not leave fullscreen")
+            point_at_video(hwnd)
+            print(f"{mode}: F and Escape enter and leave fullscreen", flush=True)
 
         remote.run("rate 1.25")
         remote.expect_rate(1.25)
@@ -397,7 +426,7 @@ version = subprocess.check_output(
 ).strip()
 (profile / "vlcrc").write_text(
     "qt-privacy-ask=0\nredesign-update-check=0\nmetadata-network-access=0\n"
-    "key-audiodelay-up=\nkey-play-pause=Space\tk\n"
+    "key-audiodelay-up=\nkey-play-pause=Space\tk\nkey-jump+short=Right\nshort-jump-size=10\n"
     f"restore-playback-states={int(args.baseline)}\nrestore-playback-pos=0\n")
 (profile / "vlc" / "vlc-qt-interface.ini").write_text(
     "[redesign]\nremember-window-geometry=false\nsubtitle-auto-search=false\n"
