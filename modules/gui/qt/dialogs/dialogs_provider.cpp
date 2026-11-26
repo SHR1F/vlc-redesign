@@ -801,7 +801,16 @@ void DialogsProvider::addQueueItemsToPlaylist(const QList<PlaylistItem>& items)
         if (!input)
             return false;
         vlc_mutex_locker locker(&input->lock);
-        return input->i_options > 0;
+        // (the history filter's own option is not one the user set)
+        for (int i = 0; i < input->i_options; ++i)
+        {
+            const char *option = input->ppsz_options[i];
+            if (option[0] == ':')
+                ++option;
+            if (strcmp(option, "no-save-recentplay") != 0)
+                return true;
+        }
+        return false;
     });
 
     const auto addToLibraryPlaylist = [this, items]() {
